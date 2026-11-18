@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>CFBundleName</key><string>Foco</string>
+<key>CFBundleDisplayName</key><string>Foco</string>
+<key>CFBundleExecutable</key><string>Foco</string>
+<key>CFBundleIdentifier</key><string>local.foco.Foco</string>
+<key>CFBundlePackageType</key><string>APPL</string>
+<key>CFBundleVersion</key><string>7</string>
+<key>CFBundleShortVersionString</key><string>0.6.1</string>
+<key>CFBundleIconFile</key><string>Foco.icns</string>
+<key>LSMinimumSystemVersion</key><string>26.0</string>
+<key>NSPrincipalClass</key><string>NSApplication</string>
+<key>NSHighResolutionCapable</key><true/>
+<key>NSHumanReadableCopyright</key><string>Foco · Aplicación local de concentración.</string>
+</dict></plist>

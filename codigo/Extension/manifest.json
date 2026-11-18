@@ -1,0 +1,39 @@
+{
+  "manifest_version": 3,
+  "name": "Foco · Bloqueador de estudio",
+  "version": "0.4.0",
+  "description": "Bloqueador local de sitios elegidos por vos. Permisos de Chrome por dominio.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAl98Fxve7j2UqxZD8Xy00CPpVB6Bb5OFqVO7EHbGc4tfCiUBejE7OVF5M9BMLVTRS8fiIoHz84ZvIo2Oz76/RL1Oj3tvXJtrbdnxywKcyaE78CbX2gbLVilCmCzRakFoZYzw07x14bPuQUSWhORh9x+l7raS1QU4CptiUD/+9RWrEXnEmwBk6PtLrezbfJ23saBfhXv4og5pWHG9tVfIh9v69+4UUnckhG9Wgq1O+yMjVI6QqU4nbtxIPvgYz3EcZjAUQiUYlmaLziVRqVFUN3pd6GMPaf0ZHIRLAMn2fTnEfA1Dz36bQ2F4c833BMEjjSbBMmfl4Sa4jpDqPsbZG8QIDAQAB",
+  "permissions": [
+    "nativeMessaging",
+    "declarativeNetRequestWithHostAccess",
+    "storage",
+    "alarms"
+  ],
+  "background": {
+    "service_worker": "worker.js"
+  },
+  "action": {
+    "default_title": "Foco · Abrí la app para controlar tu sesión",
+    "default_popup": "popup.html"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "blocked.html",
+        "blocked.css",
+        "blocked.js"
+      ],
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ]
+    }
+  ],
+  "optional_host_permissions": [
+    "*://*/*"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none';"
+  }
+}

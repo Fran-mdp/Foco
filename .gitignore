@@ -1,0 +1,21 @@
+# Generated bundles, archives, compiler caches and local security reports
+*.app/
+*.zip
+.build/
+.gstack/
+Extension-Chrome/
+.DS_Store
+# Local configuration, histories and credentials never belong in this repository
+state.json
+state.lock
+local.foco.bridge.json
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.pfx
+*.key
+*.mobileprovision
+*.provisionprofile
+*.log
