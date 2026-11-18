@@ -1,5 +1,13 @@
 # Cambios
 
+## 0.7.0
+
+- Objetivos con meta opcional de horas y varias tareas asociadas.
+- Bloques directos por objetivo, tiempo histórico sin pausas y filtro del dashboard.
+- Resultado manual Cumplido, Parcial o No cumplido, con nota opcional y comparación con la dedicación planificada.
+- Asociación histórica de cada bloque, importación explícita de bloques sin objetivo y borrado con deshacer sin perder tiempo.
+- Compatibilidad con datos anteriores y exclusión de objetivos y resultados de los mensajes a Chrome.
+
 ## 0.6.1
 
 - Tiempo por día antes de tareas y logros; logros debajo de la actividad.

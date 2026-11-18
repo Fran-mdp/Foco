@@ -37,6 +37,7 @@ struct NativeHost {
                 }
                 if let s = state.session, let data = try? JSONEncoder().encode(s), var json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
                     json.removeValue(forKey: "taskID")
+                    json.removeValue(forKey: "goalID")
                     object["session"] = json
                 }
                 let encoded = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])

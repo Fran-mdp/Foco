@@ -28,7 +28,7 @@ struct AchievementsView: View {
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(Color.focoSecondary)
             }
-            Text("Logros acumulados e independientes del período seleccionado en el panel.")
+            Text("Logros generales, independientes de las fechas y del objetivo elegido.")
                 .font(.system(size: 12))
                 .foregroundStyle(Color.focoSecondary)
         }

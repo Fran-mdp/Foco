@@ -7,8 +7,8 @@ FOCO_STAGE="$(mktemp -d /private/tmp/foco-package.XXXXXX)"
 trap 'rm -rf "$FOCO_STAGE"' EXIT
 FOCO_BUNDLE="$FOCO_STAGE/Foco.app"
 mkdir -p "$FOCO_CACHE" "$FOCO_BUNDLE/Contents/MacOS" "$FOCO_BUNDLE/Contents/Resources"
-xcrun swiftc -swift-version 5 -O -parse-as-library -target arm64-apple-macosx26.0 -module-cache-path "$FOCO_CACHE" Sources/Achievements.swift Sources/Core.swift Sources/BlockingRules.swift Sources/AppBlocker.swift Sources/NativeHost.swift -o "$FOCO_BUNDLE/Contents/MacOS/FocoBridge"
-xcrun swiftc -swift-version 5 -O -parse-as-library -target arm64-apple-macosx26.0 -module-cache-path "$FOCO_CACHE" Sources/Achievements.swift Sources/Core.swift Sources/BlockingRules.swift Sources/AppBlocker.swift Sources/Metrics.swift Sources/Dashboard.swift Sources/AchievementsView.swift Sources/TasksView.swift Sources/BlockEditor.swift Sources/ApplicationPicker.swift Sources/FocoApp.swift -o "$FOCO_BUNDLE/Contents/MacOS/Foco"
+xcrun swiftc -swift-version 5 -O -parse-as-library -target arm64-apple-macosx26.0 -module-cache-path "$FOCO_CACHE" Sources/Goals.swift Sources/Achievements.swift Sources/Core.swift Sources/BlockingRules.swift Sources/AppBlocker.swift Sources/NativeHost.swift -o "$FOCO_BUNDLE/Contents/MacOS/FocoBridge"
+xcrun swiftc -swift-version 5 -O -parse-as-library -target arm64-apple-macosx26.0 -module-cache-path "$FOCO_CACHE" Sources/Goals.swift Sources/Achievements.swift Sources/Core.swift Sources/BlockingRules.swift Sources/AppBlocker.swift Sources/Metrics.swift Sources/Dashboard.swift Sources/GoalsView.swift Sources/AchievementsView.swift Sources/TasksView.swift Sources/BlockEditor.swift Sources/ApplicationPicker.swift Sources/FocoApp.swift -o "$FOCO_BUNDLE/Contents/MacOS/Foco"
 cp Resources/Info.plist "$FOCO_BUNDLE/Contents/Info.plist"
 if [ -f Resources/Foco.icns ]; then cp Resources/Foco.icns "$FOCO_BUNDLE/Contents/Resources/"; fi
 mkdir -p "$FOCO_DEST/Extension-Chrome"

@@ -19,3 +19,7 @@ Modo flexible inicial: Iniciar foco empieza al instante. Modo firme: requiere el
 La app dice «bloqueados» solo después de que Chrome confirme las reglas. Si falta la conexión, explica el siguiente paso. Pausar congela el cronómetro y conserva los bloqueos; terminar está disponible en modo flexible. Cerrar una ventana no termina la sesión.
 
 La apariencia sigue la Mac, los controles son nativos y accesibles por teclado. Sin animaciones ambientales continuas. El contador también tiene una etiqueta accesible.
+
+## Objetivos
+
+Navegación compacta Foco, Tareas, Objetivos, Progreso. Un objetivo reúne tareas y bloques directos; la meta de horas y la evaluación del resultado son datos distintos. Al cerrarlo, comparar tiempo realizado con planificado sin indicar que todavía faltan horas de trabajo. El dashboard distingue acumulado histórico y fechas elegidas. Los logros generales permanecen independientes del objetivo filtrado.
