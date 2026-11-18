@@ -19,3 +19,9 @@ local.foco.bridge.json
 *.mobileprovision
 *.provisionprofile
 *.log
+
+# Private orchestration configuration and local review artifacts
+orquestacion/
+REVISION-*.md
+UI_UX_REVIEW.md
+CAMBIOS-*.patch

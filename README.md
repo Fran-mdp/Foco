@@ -10,7 +10,7 @@ La instalación actual compila Foco en tu propia Mac. No necesitás pagar una cu
 
 ### 1. Descargá el proyecto
 
-En este repositorio, tocá **Code → Download ZIP** y descomprimí el archivo. Abrí la carpeta que contiene este README y `Instalar.command`.
+[Descargá el proyecto en ZIP](https://github.com/Fran-mdp/Foco/archive/refs/heads/main.zip) y descomprimí el archivo. También podés usar **Code → Download ZIP** en GitHub. Abrí la carpeta que contiene este README y `Instalar.command`.
 
 ### 2. Instalá Foco
 
