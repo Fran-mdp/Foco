@@ -25,12 +25,12 @@ struct CoreTests {
         var state = try store.read(now: t+12)
         check(state.session == nil && state.records.first?.seconds == 12, "flexible stop records actual time")
         let manualRecord = state.records.first!
-        check(state.pendingQualityRecordID == manualRecord.id && manualRecord.qualityRating == nil, "manual stop queues optional rating")
-        do { try store.setRecordQuality(id: manualRecord.id, rating: 11); fatalError("Invalid quality accepted") }
+        check(state.pendingQualityRecordID == manualRecord.id && manualRecord.qualityRating == nil && manualRecord.difficulty == nil, "manual stop queues optional rating")
+        do { try store.setRecordReview(id: manualRecord.id, rating: 11, difficulty: .low); fatalError("Invalid quality accepted") }
         catch FocusQualityError.invalidRating {}
-        try store.setRecordQuality(id: manualRecord.id, rating: 8)
+        try store.setRecordReview(id: manualRecord.id, rating: 8, difficulty: .high)
         state = try store.read(now: t+12)
-        check(state.records.first?.qualityRating == 8 && state.pendingQualityRecordID == nil, "rating persists and resolves prompt")
+        check(state.records.first?.qualityRating == 8 && state.records.first?.difficulty == .high && state.pendingQualityRecordID == nil, "quality and difficulty persist together and resolve prompt")
 
         try store.acknowledge(profile: "profile-A", appliedID: "", error: nil, now: t+12)
         try store.start(duration: 60, firm: true, now: t+12)
@@ -45,9 +45,12 @@ struct CoreTests {
         check(state.records.count == 2, "expiry records session exactly once")
         let timedRecord = state.records.first!
         check(state.pendingQualityRecordID == timedRecord.id, "timed finish queues rating across store reload")
-        try store.setRecordQuality(id: timedRecord.id, rating: nil)
+        try store.setRecordReview(id: timedRecord.id, rating: nil, difficulty: nil)
         state = try store.read(now: t+101)
         check(state.pendingQualityRecordID == nil && state.records.first?.qualityRating == nil, "skipping leaves no score and does not reopen the prompt")
+        try reloaded.setRecordReview(id: timedRecord.id, rating: nil, difficulty: .medium)
+        state = try reloaded.read(now: t+101)
+        check(state.records.first?.qualityRating == nil && state.records.first?.difficulty == .medium, "difficulty can be added without a quality score")
 
         do { try store.acknowledge(profile: "profile-B", appliedID: "", error: nil, now: t+102); fatalError("Other profile accepted") }
         catch FocusError.profile { checks += 1; print("PASS other Chrome profile rejected") }

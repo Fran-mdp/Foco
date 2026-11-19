@@ -45,6 +45,18 @@ struct FocusSession: Codable, Equatable {
     func expired(at now: Double) -> Bool { !isPaused && (endsAt.map { now >= $0 } ?? false) }
 
 }
+enum FocusDifficulty: String, Codable, CaseIterable {
+    case low, medium, high
+
+    var label: String {
+        switch self {
+        case .low: return "Baja"
+        case .medium: return "Media"
+        case .high: return "Alta"
+        }
+    }
+}
+
 struct FocusRecord: Codable, Identifiable {
     var id: String
     var startedAt: Double
@@ -55,6 +67,7 @@ struct FocusRecord: Codable, Identifiable {
     var taskID: String? = nil
     var goalID: String? = nil
     var qualityRating: Int? = nil
+    var difficulty: FocusDifficulty? = nil
     var activeIntervals: [FocusInterval] { intervals ?? [FocusInterval(start: startedAt, end: startedAt + seconds)] }
 }
 struct FocusTaskProgress: Codable, Equatable {
@@ -237,11 +250,12 @@ final class FocusStore {
             state.revision += 1
         }
     }
-    func setRecordQuality(id: String, rating: Int?) throws {
+    func setRecordReview(id: String, rating: Int?, difficulty: FocusDifficulty?) throws {
         if let rating, !(1...10).contains(rating) { throw FocusQualityError.invalidRating }
         try transaction { state in
             guard let index = state.records.firstIndex(where: { $0.id == id }) else { throw FocusQualityError.missingRecord }
             state.records[index].qualityRating = rating
+            state.records[index].difficulty = difficulty
             if state.pendingQualityRecordID == id { state.pendingQualityRecordID = nil }
             state.revision += 1
         }

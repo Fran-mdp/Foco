@@ -1,5 +1,9 @@
 # Cambios
 
+## 0.7.2
+
+- Dificultad del tema (Baja, Media o Alta) junto a la calidad en la valoración de cada sesión.
+
 ## 0.7.1
 
 - Valoración opcional del 1 al 10 al terminar una sesión.

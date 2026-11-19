@@ -57,9 +57,9 @@ Los bloques conservan el objetivo con el que empezaron. Mover una tarea no reasi
 
 Podés borrar un objetivo desde su menú y deshacer durante 8 segundos. El borrado conserva sus tareas y todos los bloques como tiempo sin objetivo; al borrar solo una tarea, sus bloques siguen sumando al objetivo original. También podés asignar o corregir un bloque terminado desde el ícono de objetivo junto a su duración en **Progreso → Sesiones del período**, incluso si no tenía tarea o si el objetivo ya está cerrado. Eso no cambia sus minutos ni sus pausas. El tiempo anterior a esta versión queda sin objetivo hasta que lo asignes explícitamente.
 
-## Calidad de foco
+## Calidad y dificultad
 
-Al terminar un bloque, podés valorar tu concentración del 1 al 10 u omitir la pregunta. En **Progreso** aparece el promedio de las sesiones que valoraste según las fechas y el objetivo elegidos. En **Sesiones del período → …** podés agregar, editar o quitar una valoración.
+Al terminar un bloque, podés valorar tu concentración del 1 al 10 y elegir si el tema tuvo dificultad Baja, Media o Alta. Podés guardar los dos datos juntos, completar solo uno u omitir la pregunta. En **Progreso** aparece el promedio de las sesiones que valoraste según las fechas y el objetivo elegidos. En **Sesiones del período → …** podés agregar, editar o quitar cualquiera de los dos datos.
 
 ## Ayuda
 

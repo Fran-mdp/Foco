@@ -95,11 +95,14 @@ struct ProgressDashboard: View {
                                 if let rating = record.qualityRating {
                                     Text("Calidad: \(rating)/10").font(.system(size: 12, weight: .medium)).foregroundStyle(Color.foco)
                                 }
+                                if let difficulty = record.difficulty {
+                                    Text("Dificultad: \(difficulty.label)").font(.system(size: 12)).foregroundStyle(Color.focoSecondary)
+                                }
                             }
                             Spacer()
                             Text(durationLabel(record.seconds)).font(.system(size: 14, weight: .medium, design: .rounded)).monospacedDigit()
                             Menu {
-                                Button(record.qualityRating == nil ? "Valorar calidad…" : "Editar valoración…") { ratingRecord = record }
+                                Button(record.qualityRating == nil && record.difficulty == nil ? "Valorar sesión…" : "Editar valoración…") { ratingRecord = record }
                                 Picker("Objetivo del bloque", selection: Binding(get: { record.goalID }, set: { model.assignRecordGoal(record, id: $0) })) {
                                     Text("Sin objetivo").tag(nil as String?)
                                     ForEach(model.goals) { Text($0.title).tag(Optional($0.id)) }
@@ -123,7 +126,7 @@ struct ProgressDashboard: View {
             }.font(.system(size: 12))
         }
         .sheet(item: $ratingRecord) { record in
-            SessionQualitySheet(record: record, isPrompt: false).environmentObject(model)
+            SessionReviewSheet(record: record, isPrompt: false).environmentObject(model)
         }
         .onChange(of: selectedGoalID) { _, _ in selectedDate = nil; visibleRecords = 20 }
         .onChange(of: model.state.revision) { _, _ in
@@ -214,25 +217,27 @@ struct ProgressDashboard: View {
     }
 }
 
-struct SessionQualitySheet: View {
+struct SessionReviewSheet: View {
     @EnvironmentObject private var model: FocoModel
     @Environment(\.dismiss) private var dismiss
     let record: FocusRecord
     let isPrompt: Bool
     @ViewState private var rating: Int?
+    @ViewState private var difficulty: FocusDifficulty?
     @ViewState private var errorText: String?
 
     init(record: FocusRecord, isPrompt: Bool) {
         self.record = record
         self.isPrompt = isPrompt
         _rating = ViewState(initialValue: record.qualityRating)
+        _difficulty = ViewState(initialValue: record.difficulty)
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("¿Cómo fue tu concentración?")
+            Text("¿Cómo fue tu sesión?")
                 .font(.system(size: 23, weight: .medium, design: .rounded))
-            Text("\(durationLabel(record.seconds)) de foco. Valorá cómo te sentiste durante la sesión.")
+            Text("\(durationLabel(record.seconds)) de foco. Registrá tu concentración y la dificultad del tema.")
                 .font(.system(size: 13))
                 .foregroundStyle(Color.focoSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -244,25 +249,29 @@ struct SessionQualitySheet: View {
             Text("1 = muy disperso · 10 = muy concentrado")
                 .font(.system(size: 12)).foregroundStyle(Color.focoSecondary)
 
-            if !isPrompt, record.qualityRating != nil {
-                Button("Quitar valoración") { save(nil) }.buttonStyle(.plain)
+            Picker("Dificultad del tema", selection: $difficulty) {
+                Text("Sin indicar").tag(nil as FocusDifficulty?)
+                ForEach(FocusDifficulty.allCases, id: \.self) { level in
+                    Text(level.label).tag(Optional(level))
+                }
             }
+            .pickerStyle(.menu)
             if let errorText {
                 Text(errorText).font(.system(size: 12)).foregroundStyle(.red)
             }
 
             HStack {
                 Button(isPrompt ? "Omitir" : "Cancelar") {
-                    if isPrompt { save(nil) } else { dismiss() }
+                    if isPrompt { save(rating: nil, difficulty: nil) } else { dismiss() }
                 }
                 .keyboardShortcut(.cancelAction)
                 Spacer()
                 Button("Guardar") {
-                    if let rating { save(rating) }
+                    save(rating: rating, difficulty: difficulty)
                 }
                 .buttonStyle(FocoPrimaryStyle())
                 .keyboardShortcut(.defaultAction)
-                .disabled(rating == nil)
+                .disabled(isPrompt && rating == nil && difficulty == nil)
             }
         }
         .padding(24)
@@ -270,9 +279,9 @@ struct SessionQualitySheet: View {
         .interactiveDismissDisabled(isPrompt)
     }
 
-    private func save(_ rating: Int?) {
+    private func save(rating: Int?, difficulty: FocusDifficulty?) {
         do {
-            try model.setRecordQuality(record, rating: rating)
+            try model.setRecordReview(record, rating: rating, difficulty: difficulty)
             dismiss()
         } catch {
             errorText = error.localizedDescription

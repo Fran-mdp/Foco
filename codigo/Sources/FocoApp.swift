@@ -87,8 +87,8 @@ final class FocoModel: ObservableObject {
         guard session == nil, let id = state.pendingQualityRecordID else { return nil }
         return state.records.first { $0.id == id }
     }
-    func setRecordQuality(_ record: FocusRecord, rating: Int?) throws {
-        try store.setRecordQuality(id: record.id, rating: rating)
+    func setRecordReview(_ record: FocusRecord, rating: Int?, difficulty: FocusDifficulty?) throws {
+        try store.setRecordReview(id: record.id, rating: rating, difficulty: difficulty)
         tick()
     }
     func deleteRecord(_ record: FocusRecord) {
@@ -366,7 +366,7 @@ struct ContentView: View {
         .sheet(item: Binding(get: {
             model.showEditor || model.showTimer || model.showSetup || finishConfirm ? nil : model.pendingQualityRecord
         }, set: { _ in })) { record in
-            SessionQualitySheet(record: record, isPrompt: true).environmentObject(model)
+            SessionReviewSheet(record: record, isPrompt: true).environmentObject(model)
         }
         .sheet(isPresented: $model.showSetup) { SetupSheet().environmentObject(model) }
         .alert("No pudimos completar la acción", isPresented: Binding(get: {model.error != nil}, set: {if !$0 {model.error = nil}})) {
