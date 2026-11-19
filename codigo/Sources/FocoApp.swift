@@ -22,7 +22,6 @@ final class FocoModel: ObservableObject {
     @Published var goalMinutes = max(5, UserDefaults.standard.object(forKey: "goalMinutes") as? Int ?? 60) { didSet { UserDefaults.standard.set(goalMinutes, forKey: "goalMinutes") } }
     private let appGuard = ApplicationGuard()
     @Published var minutes = 25
-    @Published var showFinish = false
     @Published var lastFinished: Double?
     @Published private(set) var deletedRecord: FocusRecord?
     private var undoExpiresAt: Date?
@@ -83,6 +82,14 @@ final class FocoModel: ObservableObject {
     }
     func togglePause() {
         do { try store.setPaused(session?.isPaused != true); tick() } catch { self.error = error.localizedDescription }
+    }
+    var pendingQualityRecord: FocusRecord? {
+        guard session == nil, let id = state.pendingQualityRecordID else { return nil }
+        return state.records.first { $0.id == id }
+    }
+    func setRecordQuality(_ record: FocusRecord, rating: Int?) throws {
+        try store.setRecordQuality(id: record.id, rating: rating)
+        tick()
     }
     func deleteRecord(_ record: FocusRecord) {
         do {
@@ -356,6 +363,11 @@ struct ContentView: View {
         }
         .sheet(isPresented: $model.showEditor) { BlockEditor().environmentObject(model) }
         .sheet(isPresented: $model.showTimer) { TimerSheet().environmentObject(model) }
+        .sheet(item: Binding(get: {
+            model.showEditor || model.showTimer || model.showSetup || finishConfirm ? nil : model.pendingQualityRecord
+        }, set: { _ in })) { record in
+            SessionQualitySheet(record: record, isPrompt: true).environmentObject(model)
+        }
         .sheet(isPresented: $model.showSetup) { SetupSheet().environmentObject(model) }
         .alert("No pudimos completar la acción", isPresented: Binding(get: {model.error != nil}, set: {if !$0 {model.error = nil}})) {
             Button("Entendido") { model.error = nil }

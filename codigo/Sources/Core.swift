@@ -54,6 +54,7 @@ struct FocusRecord: Codable, Identifiable {
     var intervals: [FocusInterval]? = nil
     var taskID: String? = nil
     var goalID: String? = nil
+    var qualityRating: Int? = nil
     var activeIntervals: [FocusInterval] { intervals ?? [FocusInterval(start: startedAt, end: startedAt + seconds)] }
 }
 struct FocusTaskProgress: Codable, Equatable {
@@ -110,6 +111,7 @@ struct FocusState: Codable {
     var records: [FocusRecord] = []
     var tasks: [FocusTask]? = nil
     var goals: [FocusGoal]? = nil
+    var pendingQualityRecordID: String? = nil
     var bridgeSeen: Double = 0
     var appliedID: String = ""
     var browserError: String?
@@ -122,9 +124,20 @@ struct FocusState: Codable {
     mutating func finish(at now: Double, completed: Bool) {
         guard let s = session else { return }
         records.insert(FocusRecord(id: s.id, startedAt: s.startedAt, seconds: s.elapsed(at: now), completed: completed, targetSeconds: s.duration, intervals: s.intervals(at: now), taskID: s.taskID, goalID: s.goalID), at: 0)
+        pendingQualityRecordID = s.id
         session = nil; revision += 1
     }
     mutating func expire(at now: Double) { if session?.expired(at: now) == true { finish(at: now, completed: true) } }
+}
+enum FocusQualityError: LocalizedError {
+    case invalidRating, missingRecord
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidRating: return "Elegí una valoración del 1 al 10."
+        case .missingRecord: return "Esa sesión ya no está disponible."
+        }
+    }
 }
 enum FocusError: LocalizedError {
     case unavailable, busy, firm, invalidDuration, corrupt, profile
@@ -224,10 +237,20 @@ final class FocusStore {
             state.revision += 1
         }
     }
+    func setRecordQuality(id: String, rating: Int?) throws {
+        if let rating, !(1...10).contains(rating) { throw FocusQualityError.invalidRating }
+        try transaction { state in
+            guard let index = state.records.firstIndex(where: { $0.id == id }) else { throw FocusQualityError.missingRecord }
+            state.records[index].qualityRating = rating
+            if state.pendingQualityRecordID == id { state.pendingQualityRecordID = nil }
+            state.revision += 1
+        }
+    }
     func deleteRecord(id: String) throws -> FocusRecord? {
         try transaction { state in
             guard let index = state.records.firstIndex(where: { $0.id == id }) else { return nil }
             let record = state.records.remove(at: index)
+            if state.pendingQualityRecordID == id { state.pendingQualityRecordID = nil }
             state.revision += 1
             return record
         }

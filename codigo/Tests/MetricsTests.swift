@@ -49,6 +49,15 @@ import Foundation
     let dstWeek = FocusMetrics(state: FocusState(), now: dstNow, calendar: dstCal, period: .week, anchor: dstNow, customStart: dstNow, customEnd: dstNow)
     precondition(dstWeek.points.count == 7 && dstCal.component(.weekday, from: dstWeek.points.last!.date) == 1, "DST week still ends on Sunday")
     precondition(dstWeek.bounds.duration == 167 * 3600 && dstWeek.dayCount == 3, "DST week uses calendar boundaries while average ends today")
+    var ratedState = state
+    ratedState.records[0].qualityRating = 2
+    ratedState.records[1].qualityRating = 8
+    ratedState.records[1].goalID = "example"
+    ratedState.records.append(FocusRecord(id: "unrated", startedAt: now.timeIntervalSince1970, seconds: 10, completed: true))
+    let scoped = FocusMetrics(state: ratedState.filtered(forGoal: "example"), now: now, calendar: cal, period: .month, anchor: now, customStart: now, customEnd: now)
+    precondition(scoped.qualitySummary?.average == 8 && scoped.qualitySummary?.count == 1)
+    let full = FocusMetrics(state: ratedState, now: now, calendar: cal, period: .year, anchor: now, customStart: now, customEnd: now)
+    precondition(full.qualitySummary?.average == 8 && full.qualitySummary?.count == 1, "Quality excludes other dates and unscored sessions")
     print("Metrics checks passed: midnight, averages, filters, full Monday–Sunday chart, future days, empty/past/DST weeks and year buckets")
  }
 }

@@ -1,5 +1,10 @@
 # Cambios
 
+## 0.7.1
+
+- Valoración opcional del 1 al 10 al terminar una sesión.
+- Calidad por bloque y promedio de sesiones valoradas según fecha y objetivo.
+
 ## 0.7.0
 
 - Objetivos con meta opcional de horas y varias tareas asociadas.
