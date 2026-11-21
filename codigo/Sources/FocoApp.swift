@@ -113,7 +113,7 @@ final class FocoModel: ObservableObject {
     }
     var tasks: [FocusTask] { state.tasks ?? [] }
     var availableTasks: [FocusTask] {
-        tasks.filter { canFocusTask($0) }
+        tasks.filter { canFocusTask($0) && (selectedGoalID == nil || $0.goalID == selectedGoalID) }
             .sorted { $0.plannedFor == $1.plannedFor ? $0.createdAt < $1.createdAt : $0.plannedFor < $1.plannedFor }
     }
     var goals: [FocusGoal] { (state.goals ?? []).sorted { $0.createdAt > $1.createdAt } }
@@ -132,8 +132,10 @@ final class FocoModel: ObservableObject {
     }
     func chooseGoalID(_ id: String?) {
         guard session == nil else { return }
-        if let task = tasks.first(where: { $0.id == selectedTaskID }), let taskGoal = task.goalID, taskGoal != id { selectedTaskID = nil }
         selectedGoalID = id
+        if let selectedTaskID, !availableTasks.contains(where: { $0.id == selectedTaskID }) {
+            self.selectedTaskID = nil
+        }
     }
     func chooseGoal(_ goal: FocusGoal) {
         guard session == nil, goal.closedAt == nil else { return }

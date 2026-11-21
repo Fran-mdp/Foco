@@ -1,5 +1,9 @@
 # Cambios
 
+## 0.7.3
+
+- El selector de tareas del próximo bloque muestra solo las tareas del objetivo elegido. Sin objetivo, muestra todas las tareas disponibles.
+
 ## 0.7.2
 
 - Dificultad del tema (Baja, Media o Alta) junto a la calidad en la valoración de cada sesión.
