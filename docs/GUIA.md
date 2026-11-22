@@ -144,3 +144,11 @@ Al borrar una tarea se eliminan su nombre y porcentajes; se conserva localmente 
 ## Gráfico semanal (0.6.1)
 
 Tiempo por día aparece encima de tareas y logros. La vista Semana muestra los siete días, de lunes a domingo, con barras más delgadas. Los días futuros aparecen sin actividad y no entran en el promedio diario. La versión actual sigue siendo para Mac; la versión Windows queda pendiente de una etapa posterior.
+
+## Objetivos y evaluación del resultado
+
+En Objetivos → Nuevo creá una meta como Aprobar IPSC y fijá horas opcionales. Varias tareas pueden compartir objetivo; también se puede iniciar foco directamente para él. Los bloques conservan la asociación con la que empezaron, con las pausas excluidas. En Progreso, el selector Objetivo filtra estadísticas, gráfico y sesiones, distinguiendo acumulado total y tiempo de las fechas elegidas.
+
+Registrar resultado permite elegir Cumplido, Parcial o No cumplido y una nota opcional. El objetivo pasa a Con resultado y deja de aceptar bloques nuevos. Llegar a las horas no elige el resultado. Se puede corregir la evaluación posteriormente.
+
+Para incorporar historial, usá Incluir bloques anteriores sin objetivo al editar una tarea o el ícono de objetivo de cada sesión terminada. Una reasignación explícita modifica únicamente la asociación, no su duración. Borrar un objetivo conserva tareas y bloques y permite deshacer durante ocho segundos. Los nombres de objetivos, notas y resultados no se transmiten a Chrome ni a servidores externos.

@@ -9,8 +9,10 @@ struct ProgressDashboard: View {
     @ViewState private var to = Date()
     @ViewState private var selectedDate: Date?
     @ViewState private var visibleRecords = 20
+    @ViewState private var selectedGoalID: String?
+    @ViewState private var ratingRecord: FocusRecord?
     var metrics: FocusMetrics {
-        FocusMetrics(state: model.state, now: model.now, period: period, anchor: anchor, customStart: from, customEnd: to)
+        FocusMetrics(state: model.state.filtered(forGoal: selectedGoalID), now: model.now, period: period, anchor: anchor, customStart: from, customEnd: to)
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -20,6 +22,10 @@ struct ProgressDashboard: View {
             }
             VStack(alignment: .leading, spacing: 16) {
                 Picker("Ver progreso por", selection: $period) { ForEach(FocusPeriod.allCases) { Text($0.rawValue).tag($0) } }.pickerStyle(.segmented).labelsHidden()
+                Picker("Objetivo", selection: $selectedGoalID) {
+                    Text("Todo mi foco").tag(nil as String?)
+                    ForEach(model.goals) { goal in Text("\(goal.title)\(goal.closedAt != nil ? " · cerrado" : "")").tag(Optional(goal.id)) }
+                }.pickerStyle(.menu).help("Todo mi foco incluye todos los objetivos y los bloques sin objetivo.")
                 if period == .custom {
                     ViewThatFits(in: .horizontal) {
                         HStack { rangeFields }
@@ -31,14 +37,39 @@ struct ProgressDashboard: View {
                 Text("\(metrics.bounds.start.formatted(date: .abbreviated, time: .omitted)) — \(Calendar.current.date(byAdding: .day, value: -1, to: metrics.bounds.end)!.formatted(date: .abbreviated, time: .omitted))")
                     .font(.system(size: 12, weight: .medium)).foregroundStyle(Color.foco)
             }.padding(18).panel()
+            if let goal = model.goals.first(where: { $0.id == selectedGoalID }) {
+                VStack(alignment: .leading, spacing: 14) {
+                    Label(goal.title, systemImage: "target").font(.system(size: 18, weight: .medium, design: .rounded))
+                    GoalTimeSummary(goal: goal, seconds: model.goalSeconds(goal.id))
+                    Text("Acumulado de toda la vida del objetivo. En las fechas elegidas: \(durationLabel(metrics.total)).")
+                        .font(.system(size: 12)).foregroundStyle(Color.focoSecondary)
+                    if let note = goal.resultNote { DisclosureGroup("Nota del resultado") { Text(note).font(.system(size: 12)).padding(.top, 8) }.font(.system(size: 12)) }
+                }.padding(22).panel()
+            }
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 165), spacing: 16)], spacing: 16) {
                 metric("Tiempo en sesiones", value: durationLabel(metrics.total), detail: "Pausas excluidas", icon: "clock")
                 metric("Promedio por día", value: durationLabel(metrics.dailyAverage), detail: "Incluye días sin actividad", icon: "calendar")
                 metric("Promedio por sesión", value: durationLabel(metrics.sessionAverage), detail: "\(metrics.sessions.count) bloques terminados", icon: "circle.dotted.circle")
                 metric("Días con sesiones", value: "\(metrics.activeDays) de \(metrics.dayCount)", detail: "Dentro de las fechas elegidas", icon: "sun.max")
             }
+            if let quality = metrics.qualitySummary {
+                HStack(alignment: .firstTextBaseline) {
+                    Label("Calidad promedio", systemImage: "star")
+                        .font(.system(size: 14, weight: .semibold))
+                    Spacer()
+                    Text("\(quality.average.formatted(.number.precision(.fractionLength(1))))/10")
+                        .monospacedDigit()
+                }
+                .padding(.horizontal, 18)
+                .padding(.top, 12)
+                .padding(.bottom, 4)
+                .accessibilityElement(children: .combine)
+                Text("\(quality.count) \(quality.count == 1 ? "sesión valorada" : "sesiones valoradas") en este filtro")
+                    .font(.system(size: 12)).foregroundStyle(Color.focoSecondary)
+                    .padding(.horizontal, 18)
+            }
             chartPanel
-            TaskProgressPanel(interval: metrics.bounds).environmentObject(model)
+            TaskProgressPanel(interval: metrics.bounds, goalID: selectedGoalID).environmentObject(model)
             AchievementsView().environmentObject(model)
             DisclosureGroup("Comparar con el período anterior") { comparisonPanel.padding(.top, 12) }
                 .font(.system(size: 13, weight: .medium))
@@ -60,10 +91,27 @@ struct ProgressDashboard: View {
                         HStack {
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(Date(timeIntervalSince1970: record.startedAt).formatted(date: .abbreviated, time: .shortened)).font(.system(size: 12, weight: .medium))
-                                Text(model.taskName(record.taskID) + " · " + (record.completed ? "Temporizador completado" : "Sesión terminada manualmente")).font(.system(size: 12)).foregroundStyle(Color.focoSecondary)
+                                Text(model.taskName(record.taskID) + " · " + model.goalName(record.goalID) + " · " + (record.completed ? "Temporizador completado" : "Sesión terminada manualmente")).font(.system(size: 12)).foregroundStyle(Color.focoSecondary)
+                                if let rating = record.qualityRating {
+                                    Text("Calidad: \(rating)/10").font(.system(size: 12, weight: .medium)).foregroundStyle(Color.foco)
+                                }
+                                if let difficulty = record.difficulty {
+                                    Text("Dificultad: \(difficulty.label)").font(.system(size: 12)).foregroundStyle(Color.focoSecondary)
+                                }
                             }
                             Spacer()
                             Text(durationLabel(record.seconds)).font(.system(size: 14, weight: .medium, design: .rounded)).monospacedDigit()
+                            Menu {
+                                Button(record.qualityRating == nil && record.difficulty == nil ? "Valorar sesión…" : "Editar valoración…") { ratingRecord = record }
+                                Picker("Objetivo del bloque", selection: Binding(get: { record.goalID }, set: { model.assignRecordGoal(record, id: $0) })) {
+                                    Text("Sin objetivo").tag(nil as String?)
+                                    ForEach(model.goals) { Text($0.title).tag(Optional($0.id)) }
+                                }
+                                if model.goals.isEmpty { Button("Crear un objetivo") { model.section = .goals } }
+                            } label: { Image(systemName: "ellipsis").frame(width: 22, height: 24) }
+                                .menuStyle(.borderlessButton).menuIndicator(.hidden).frame(width: 22)
+                                .help("Editar la valoración o el objetivo del bloque")
+                                .accessibilityLabel("Opciones del bloque del \(Date(timeIntervalSince1970: record.startedAt).formatted(date: .abbreviated, time: .shortened))")
                             Button { model.deleteRecord(record) } label: { Image(systemName: "trash") }
                                 .buttonStyle(.borderless).help("Borrar esta sesión").accessibilityLabel("Borrar sesión de \(Date(timeIntervalSince1970: record.startedAt).formatted(date: .abbreviated, time: .shortened))")
                         }
@@ -76,6 +124,13 @@ struct ProgressDashboard: View {
                 Text("Son tiempos registrados, no una medición de tu atención. Las pausas se excluyen. Las sesiones se agrupan por su fecha de inicio; el gráfico reparte el tiempo al cruzar medianoche. Los promedios diarios incluyen días sin actividad y hoy es parcial. Podés borrar un bloque y deshacer durante 8 segundos.")
                     .font(.system(size: 12)).foregroundStyle(Color.focoSecondary).padding(.top, 10)
             }.font(.system(size: 12))
+        }
+        .sheet(item: $ratingRecord) { record in
+            SessionReviewSheet(record: record, isPrompt: false).environmentObject(model)
+        }
+        .onChange(of: selectedGoalID) { _, _ in selectedDate = nil; visibleRecords = 20 }
+        .onChange(of: model.state.revision) { _, _ in
+            if let selectedGoalID, !model.goals.contains(where: { $0.id == selectedGoalID }) { self.selectedGoalID = nil }
         }
     }
     @ViewBuilder var rangeFields: some View {
@@ -159,5 +214,77 @@ struct ProgressDashboard: View {
                 Text("\(durationLabel(model.totalToday)) de \(model.goalMinutes) min hoy. Vos elegís la meta; no hace falta subirla todos los días.").font(.system(size: 11)).foregroundStyle(Color.focoSecondary).fixedSize(horizontal: false, vertical: true)
             }
         }.padding(22).panel()
+    }
+}
+
+struct SessionReviewSheet: View {
+    @EnvironmentObject private var model: FocoModel
+    @Environment(\.dismiss) private var dismiss
+    let record: FocusRecord
+    let isPrompt: Bool
+    @ViewState private var rating: Int?
+    @ViewState private var difficulty: FocusDifficulty?
+    @ViewState private var errorText: String?
+
+    init(record: FocusRecord, isPrompt: Bool) {
+        self.record = record
+        self.isPrompt = isPrompt
+        _rating = ViewState(initialValue: record.qualityRating)
+        _difficulty = ViewState(initialValue: record.difficulty)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("¿Cómo fue tu sesión?")
+                .font(.system(size: 23, weight: .medium, design: .rounded))
+            Text("\(durationLabel(record.seconds)) de foco. Registrá tu concentración y la dificultad del tema.")
+                .font(.system(size: 13))
+                .foregroundStyle(Color.focoSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Picker("Calidad", selection: $rating) {
+                Text("Elegí del 1 al 10").tag(nil as Int?)
+                ForEach(1...10, id: \.self) { value in Text("\(value)").tag(Optional(value)) }
+            }
+            Text("1 = muy disperso · 10 = muy concentrado")
+                .font(.system(size: 12)).foregroundStyle(Color.focoSecondary)
+
+            Picker("Dificultad del tema", selection: $difficulty) {
+                Text("Sin indicar").tag(nil as FocusDifficulty?)
+                ForEach(FocusDifficulty.allCases, id: \.self) { level in
+                    Text(level.label).tag(Optional(level))
+                }
+            }
+            .pickerStyle(.menu)
+            if let errorText {
+                Text(errorText).font(.system(size: 12)).foregroundStyle(.red)
+            }
+
+            HStack {
+                Button(isPrompt ? "Omitir" : "Cancelar") {
+                    if isPrompt { save(rating: nil, difficulty: nil) } else { dismiss() }
+                }
+                .keyboardShortcut(.cancelAction)
+                Spacer()
+                Button("Guardar") {
+                    save(rating: rating, difficulty: difficulty)
+                }
+                .buttonStyle(FocoPrimaryStyle())
+                .keyboardShortcut(.defaultAction)
+                .disabled(isPrompt && rating == nil && difficulty == nil)
+            }
+        }
+        .padding(24)
+        .frame(width: 350)
+        .interactiveDismissDisabled(isPrompt)
+    }
+
+    private func save(rating: Int?, difficulty: FocusDifficulty?) {
+        do {
+            try model.setRecordReview(record, rating: rating, difficulty: difficulty)
+            dismiss()
+        } catch {
+            errorText = error.localizedDescription
+        }
     }
 }

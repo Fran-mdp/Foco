@@ -44,14 +44,18 @@ with tempfile.TemporaryDirectory(prefix='FocoProtocolInvalid-') as directory:
 # Task titles and identifiers must stay out of Chrome's native-message payload.
 with tempfile.TemporaryDirectory(prefix='FocoProtocolTasks-') as directory:
  env={**os.environ,'FOCO_TEST_DIRECTORY':directory}
- token=str(uuid.uuid4());task_id=str(uuid.uuid4());now=time.time()
+ token=str(uuid.uuid4());task_id=str(uuid.uuid4());goal_id=str(uuid.uuid4());now=time.time()
  state={'records':[],'bridgeSeen':now,'appliedID':'','revision':1,'ownerProfile':token,
+        'goals':[{'id':goal_id,'title':'Private goal fixture','createdAt':now,'outcome':'partial','resultNote':'Private result fixture'}],
         'tasks':[{'id':task_id,'title':'Private task fixture','plannedFor':now,'createdAt':now}],
-        'session':{'id':str(uuid.uuid4()),'startedAt':now,'firm':False,'taskID':task_id,'sites':[],'applications':[]}}
+        'session':{'id':str(uuid.uuid4()),'startedAt':now,'firm':False,'taskID':task_id,'goalID':goal_id,'sites':[],'applications':[]}}
  with open(directory+'/state.json','w') as target:json.dump(state,target)
  with subprocess.Popen([binary,origin],env=env,stdin=subprocess.PIPE,stdout=subprocess.PIPE) as p:
   send(p,{'op':'hello','profile':token});message=recv(p)
   assert 'taskID' not in message['session'] and 'tasks' not in message
   assert 'Private task fixture' not in json.dumps(message)
+  assert 'goalID' not in message['session'] and 'goals' not in message
+  assert 'Private goal fixture' not in json.dumps(message) and goal_id not in json.dumps(message)
+  assert 'Private result fixture' not in json.dumps(message)
   p.stdin.close();assert p.wait(timeout=5)==0
- print('PASS native task privacy: no task titles or identifiers transmitted to Chrome')
+ print('PASS native task/goal privacy: no titles, results or identifiers transmitted to Chrome')

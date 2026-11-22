@@ -44,6 +44,11 @@ struct FocusMetrics {
     var sessions: [FocusRecord] {
         state.records.filter { $0.startedAt >= bounds.start.timeIntervalSince1970 && $0.startedAt < bounds.end.timeIntervalSince1970 }
     }
+    var qualitySummary: (average: Double, count: Int)? {
+        let ratings = sessions.compactMap(\.qualityRating).filter { (1...10).contains($0) }
+        guard !ratings.isEmpty else { return nil }
+        return (Double(ratings.reduce(0, +)) / Double(ratings.count), ratings.count)
+    }
     var sessionAverage: Double { sessions.isEmpty ? 0 : sessions.reduce(0.0) { $0 + $1.seconds } / Double(sessions.count) }
     var daily: [MetricPoint] {
         var values: [MetricPoint] = []; var cursor = bounds.start

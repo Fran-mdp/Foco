@@ -14,17 +14,21 @@ final class FocoModel: ObservableObject {
     @Published var firm = false
     @Published var showEditor = false
     @Published var section: FocoSection = .focus
-    @Published var selectedTaskID: String?
+    @Published var selectedTaskID: String? {
+        didSet { if let id = selectedTaskID, let task = tasks.first(where: { $0.id == id }) { selectedGoalID = task.goalID } }
+    }
+    @Published var selectedGoalID: String?
     @Published var goalEnabled = UserDefaults.standard.bool(forKey: "goalEnabled") { didSet { UserDefaults.standard.set(goalEnabled, forKey: "goalEnabled") } }
     @Published var goalMinutes = max(5, UserDefaults.standard.object(forKey: "goalMinutes") as? Int ?? 60) { didSet { UserDefaults.standard.set(goalMinutes, forKey: "goalMinutes") } }
     private let appGuard = ApplicationGuard()
     @Published var minutes = 25
-    @Published var showFinish = false
     @Published var lastFinished: Double?
     @Published private(set) var deletedRecord: FocusRecord?
     private var undoExpiresAt: Date?
     @Published private(set) var deletedTask: DeletedFocusTask?
     private var taskUndoExpiresAt: Date?
+    @Published private(set) var deletedGoal: DeletedFocusGoal?
+    private var goalUndoExpiresAt: Date?
     let store: FocusStore
     private var timer: Timer?
     private var previousID: String?
@@ -47,14 +51,20 @@ final class FocoModel: ObservableObject {
         now = Date()
         dismissExpiredUndo(at: now)
         dismissExpiredTaskUndo(at: now)
+        dismissExpiredGoalUndo(at: now)
         do {
+            let previousTaskGoal = tasks.first(where: { $0.id == selectedTaskID })?.goalID
             let next = try store.read(now: now.timeIntervalSince1970)
             if previousID != nil, next.session == nil, let record = next.records.first, record.id == previousID {
                 lastFinished = record.seconds
             }
             previousID = next.session?.id
             state = next
+            if let task = tasks.first(where: { $0.id == selectedTaskID }), task.goalID != previousTaskGoal {
+                selectedGoalID = task.goalID
+            }
             if let selectedTaskID, !availableTasks.contains(where: { $0.id == selectedTaskID }) { self.selectedTaskID = nil }
+            if let selectedGoalID, !openGoals.contains(where: { $0.id == selectedGoalID }) { self.selectedGoalID = nil }
             let status = appGuard.enforce(session: next.session, now: now.timeIntervalSince1970)
             if next.appBlockStatus != status { try store.transaction { $0.appBlockStatus = status }; state.appBlockStatus = status }
         } catch { self.error = error.localizedDescription }
@@ -63,7 +73,7 @@ final class FocoModel: ObservableObject {
         guard connected else { showSetup = true; return }
         if firm && !timed { showTimer = true; return }
         do {
-            try store.start(duration: timed ? Double(minutes * 60) : nil, firm: firm, useConfiguration: true, taskID: selectedTaskID)
+            try store.start(duration: timed ? Double(minutes * 60) : nil, firm: firm, useConfiguration: true, taskID: selectedTaskID, goalID: selectedGoalID)
             lastFinished = nil; tick(); showTimer = false
         } catch { self.error = error.localizedDescription }
     }
@@ -72,6 +82,14 @@ final class FocoModel: ObservableObject {
     }
     func togglePause() {
         do { try store.setPaused(session?.isPaused != true); tick() } catch { self.error = error.localizedDescription }
+    }
+    var pendingQualityRecord: FocusRecord? {
+        guard session == nil, let id = state.pendingQualityRecordID else { return nil }
+        return state.records.first { $0.id == id }
+    }
+    func setRecordReview(_ record: FocusRecord, rating: Int?, difficulty: FocusDifficulty?) throws {
+        try store.setRecordReview(id: record.id, rating: rating, difficulty: difficulty)
+        tick()
     }
     func deleteRecord(_ record: FocusRecord) {
         do {
@@ -95,9 +113,60 @@ final class FocoModel: ObservableObject {
     }
     var tasks: [FocusTask] { state.tasks ?? [] }
     var availableTasks: [FocusTask] {
-        tasks.filter { $0.completedAt == nil && $0.archivedAt == nil }
+        tasks.filter { canFocusTask($0) && (selectedGoalID == nil || $0.goalID == selectedGoalID) }
             .sorted { $0.plannedFor == $1.plannedFor ? $0.createdAt < $1.createdAt : $0.plannedFor < $1.plannedFor }
     }
+    var goals: [FocusGoal] { (state.goals ?? []).sorted { $0.createdAt > $1.createdAt } }
+    var openGoals: [FocusGoal] { goals.filter { $0.closedAt == nil } }
+    func canFocusTask(_ task: FocusTask) -> Bool {
+        task.completedAt == nil && task.archivedAt == nil && (task.goalID == nil || openGoals.contains { $0.id == task.goalID })
+    }
+    func goalName(_ id: String?) -> String {
+        guard let id else { return "Sin objetivo" }
+        return goals.first(where: { $0.id == id })?.title ?? "Objetivo guardado"
+    }
+    func goalSeconds(_ id: String) -> Double { GoalMetrics(state: state, goalID: id, now: now).seconds }
+    func assignRecordGoal(_ record: FocusRecord, id: String?) {
+        do { try store.assignRecordGoal(id: record.id, goalID: id); tick() }
+        catch { self.error = error.localizedDescription }
+    }
+    func chooseGoalID(_ id: String?) {
+        guard session == nil else { return }
+        selectedGoalID = id
+        if let selectedTaskID, !availableTasks.contains(where: { $0.id == selectedTaskID }) {
+            self.selectedTaskID = nil
+        }
+    }
+    func chooseGoal(_ goal: FocusGoal) {
+        guard session == nil, goal.closedAt == nil else { return }
+        selectedTaskID = nil; selectedGoalID = goal.id; section = .focus
+    }
+    func saveGoal(_ goal: FocusGoal?, title: String, hours: Double?) -> Bool {
+        do {
+            if let goal { try store.editGoal(id: goal.id, title: title, targetHours: hours) }
+            else { try store.addGoal(title: title, targetHours: hours) }
+            tick(); return true
+        } catch { self.error = error.localizedDescription; return false }
+    }
+    func finishGoal(_ goal: FocusGoal, outcome: GoalOutcome, note: String) -> Bool {
+        do { try store.closeGoal(id: goal.id, outcome: outcome, note: note); tick(); return true }
+        catch { self.error = error.localizedDescription; return false }
+    }
+    func deleteGoal(_ goal: FocusGoal) {
+        do {
+            deletedGoal = try store.deleteGoal(id: goal.id)
+            goalUndoExpiresAt = deletedGoal == nil ? nil : Date().addingTimeInterval(8)
+            if selectedGoalID == goal.id { selectedGoalID = nil }
+            tick()
+        } catch { self.error = error.localizedDescription }
+    }
+    func undoGoalDelete() {
+        guard let deletedGoal else { return }
+        do { try store.restoreGoal(deletedGoal); dismissGoalUndo(); tick() }
+        catch { self.error = error.localizedDescription }
+    }
+    func dismissGoalUndo() { deletedGoal = nil; goalUndoExpiresAt = nil }
+    func dismissExpiredGoalUndo(at date: Date) { if let deadline = goalUndoExpiresAt, date >= deadline { dismissGoalUndo() } }
     func taskName(_ id: String?) -> String {
         guard let id else { return "Sin tarea" }
         return tasks.first(where: { $0.id == id })?.title ?? "Tarea guardada"
@@ -106,12 +175,12 @@ final class FocoModel: ObservableObject {
         TaskMetrics(state: state, now: now, interval: DateInterval(start: .distantPast, end: now)).seconds(for: id)
     }
     @discardableResult
-    func addTask(title: String, day: Date) -> Bool {
-        do { try store.addTask(title: title, day: day); tick(); return true }
+    func addTask(title: String, day: Date, goalID: String? = nil) -> Bool {
+        do { try store.addTask(title: title, day: day, goalID: goalID); tick(); return true }
         catch { self.error = error.localizedDescription; return false }
     }
-    func editTask(_ task: FocusTask, title: String, day: Date) -> Bool {
-        do { try store.editTask(id: task.id, title: title, day: day); tick(); return true }
+    func editTask(_ task: FocusTask, title: String, day: Date, goalID: String?, includePrevious: Bool = false) -> Bool {
+        do { try store.editTask(id: task.id, title: title, day: day, goal: .set(goalID, includePrevious: includePrevious)); tick(); return true }
         catch { self.error = error.localizedDescription; return false }
     }
     func completeTask(_ task: FocusTask) {
@@ -269,10 +338,12 @@ struct ContentView: View {
                     VStack(spacing: 20) {
                         header
                         Picker("Sección", selection: $model.section) {
-                            ForEach(FocoSection.allCases) { Text($0.rawValue).tag($0) }
+                            ForEach(FocoSection.allCases) { Text($0.navigationTitle).tag($0) }
                         }.pickerStyle(.segmented).labelsHidden().frame(maxWidth: 460)
                         if model.section == .tasks {
                             TasksView().environmentObject(model)
+                        } else if model.section == .goals {
+                            GoalsView().environmentObject(model)
                         } else if model.section == .progress {
                             ProgressDashboard().environmentObject(model)
                         } else if geo.size.width >= 820 {
@@ -294,6 +365,11 @@ struct ContentView: View {
         }
         .sheet(isPresented: $model.showEditor) { BlockEditor().environmentObject(model) }
         .sheet(isPresented: $model.showTimer) { TimerSheet().environmentObject(model) }
+        .sheet(item: Binding(get: {
+            model.showEditor || model.showTimer || model.showSetup || finishConfirm ? nil : model.pendingQualityRecord
+        }, set: { _ in })) { record in
+            SessionReviewSheet(record: record, isPrompt: true).environmentObject(model)
+        }
         .sheet(isPresented: $model.showSetup) { SetupSheet().environmentObject(model) }
         .alert("No pudimos completar la acción", isPresented: Binding(get: {model.error != nil}, set: {if !$0 {model.error = nil}})) {
             Button("Entendido") { model.error = nil }

@@ -16,6 +16,7 @@ struct FocusSession: Codable, Equatable {
     var sites: [BlockedSite]? = nil
     var applications: [BlockedApplication]? = nil
     var taskID: String? = nil
+    var goalID: String? = nil
     var pausedAt: Double? = nil
     var pauses: [FocusInterval]? = nil
     var isPaused: Bool { pausedAt != nil }
@@ -44,6 +45,18 @@ struct FocusSession: Codable, Equatable {
     func expired(at now: Double) -> Bool { !isPaused && (endsAt.map { now >= $0 } ?? false) }
 
 }
+enum FocusDifficulty: String, Codable, CaseIterable {
+    case low, medium, high
+
+    var label: String {
+        switch self {
+        case .low: return "Baja"
+        case .medium: return "Media"
+        case .high: return "Alta"
+        }
+    }
+}
+
 struct FocusRecord: Codable, Identifiable {
     var id: String
     var startedAt: Double
@@ -52,6 +65,9 @@ struct FocusRecord: Codable, Identifiable {
     var targetSeconds: Double? = nil
     var intervals: [FocusInterval]? = nil
     var taskID: String? = nil
+    var goalID: String? = nil
+    var qualityRating: Int? = nil
+    var difficulty: FocusDifficulty? = nil
     var activeIntervals: [FocusInterval] { intervals ?? [FocusInterval(start: startedAt, end: startedAt + seconds)] }
 }
 struct FocusTaskProgress: Codable, Equatable {
@@ -68,6 +84,7 @@ struct FocusTask: Codable, Identifiable, Equatable {
     var archivedAt: Double? = nil
     var progress: [FocusTaskProgress]? = nil
     var achievementPlannedFor: Double? = nil
+    var goalID: String? = nil
     func percent(before timestamp: Double) -> Int {
         if let entry = (progress ?? []).filter({ $0.day < timestamp }).max(by: { $0.day < $1.day }) { return entry.percent }
         return completedAt.map { $0 < timestamp ? 100 : 0 } ?? 0
@@ -106,6 +123,8 @@ struct FocusState: Codable {
     var session: FocusSession?
     var records: [FocusRecord] = []
     var tasks: [FocusTask]? = nil
+    var goals: [FocusGoal]? = nil
+    var pendingQualityRecordID: String? = nil
     var bridgeSeen: Double = 0
     var appliedID: String = ""
     var browserError: String?
@@ -117,10 +136,21 @@ struct FocusState: Codable {
     var deletedAchievementObligations: [FocusAchievementObligation]? = nil
     mutating func finish(at now: Double, completed: Bool) {
         guard let s = session else { return }
-        records.insert(FocusRecord(id: s.id, startedAt: s.startedAt, seconds: s.elapsed(at: now), completed: completed, targetSeconds: s.duration, intervals: s.intervals(at: now), taskID: s.taskID), at: 0)
+        records.insert(FocusRecord(id: s.id, startedAt: s.startedAt, seconds: s.elapsed(at: now), completed: completed, targetSeconds: s.duration, intervals: s.intervals(at: now), taskID: s.taskID, goalID: s.goalID), at: 0)
+        pendingQualityRecordID = s.id
         session = nil; revision += 1
     }
     mutating func expire(at now: Double) { if session?.expired(at: now) == true { finish(at: now, completed: true) } }
+}
+enum FocusQualityError: LocalizedError {
+    case invalidRating, missingRecord
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidRating: return "Elegí una valoración del 1 al 10."
+        case .missingRecord: return "Esa sesión ya no está disponible."
+        }
+    }
 }
 enum FocusError: LocalizedError {
     case unavailable, busy, firm, invalidDuration, corrupt, profile
@@ -172,7 +202,7 @@ final class FocusStore {
             return state
         }
     }
-    func start(duration: Double?, firm: Bool, blockWhatsAppApp: Bool = false, blockWhatsAppWeb: Bool = false, useConfiguration: Bool = false, taskID: String? = nil, now: Double = Date().timeIntervalSince1970) throws {
+    func start(duration: Double?, firm: Bool, blockWhatsAppApp: Bool = false, blockWhatsAppWeb: Bool = false, useConfiguration: Bool = false, taskID: String? = nil, goalID: String? = nil, now: Double = Date().timeIntervalSince1970) throws {
         try transaction { state in
             state.expire(at: now)
             guard state.session == nil else { throw FocusError.busy }
@@ -180,9 +210,14 @@ final class FocusStore {
             guard (!firm || duration != nil), duration.map({ $0 >= 60 && $0 <= 10_800 && $0.isFinite }) ?? true else { throw FocusError.invalidDuration }
             var session = FocusSession(startedAt: now, duration: duration, firm: firm, blockWhatsAppApp: blockWhatsAppApp, blockWhatsAppWeb: blockWhatsAppWeb)
             if let taskID {
-                guard (state.tasks ?? []).contains(where: { $0.id == taskID && $0.completedAt == nil && $0.archivedAt == nil }) else { throw FocusTaskError.missing }
+                guard let task = (state.tasks ?? []).first(where: { $0.id == taskID && $0.completedAt == nil && $0.archivedAt == nil }) else { throw FocusTaskError.missing }
+                if let assigned = task.goalID, let goalID, assigned != goalID { throw FocusGoalError.conflict }
                 session.taskID = taskID
+                session.goalID = task.goalID ?? goalID
+            } else {
+                session.goalID = goalID
             }
+            try state.requireOpenGoal(session.goalID)
             if useConfiguration {
                 let config = state.configuration ?? BlockConfiguration.initial()
                 session.sites = try config.sites.filter(\.enabled).map { try $0.validated() }
@@ -215,10 +250,21 @@ final class FocusStore {
             state.revision += 1
         }
     }
+    func setRecordReview(id: String, rating: Int?, difficulty: FocusDifficulty?) throws {
+        if let rating, !(1...10).contains(rating) { throw FocusQualityError.invalidRating }
+        try transaction { state in
+            guard let index = state.records.firstIndex(where: { $0.id == id }) else { throw FocusQualityError.missingRecord }
+            state.records[index].qualityRating = rating
+            state.records[index].difficulty = difficulty
+            if state.pendingQualityRecordID == id { state.pendingQualityRecordID = nil }
+            state.revision += 1
+        }
+    }
     func deleteRecord(id: String) throws -> FocusRecord? {
         try transaction { state in
             guard let index = state.records.firstIndex(where: { $0.id == id }) else { return nil }
             let record = state.records.remove(at: index)
+            if state.pendingQualityRecordID == id { state.pendingQualityRecordID = nil }
             state.revision += 1
             return record
         }
@@ -228,6 +274,7 @@ final class FocusStore {
             guard !state.records.contains(where: { $0.id == record.id }) else { return }
             var restored = record
             if let taskID = restored.taskID, !(state.tasks ?? []).contains(where: { $0.id == taskID }) { restored.taskID = nil }
+            if let goalID = restored.goalID, !(state.goals ?? []).contains(where: { $0.id == goalID }) { restored.goalID = nil }
             state.records.append(restored)
             state.records.sort { $0.startedAt > $1.startedAt }
             state.revision += 1
@@ -240,23 +287,36 @@ final class FocusStore {
         return trimmed
     }
     @discardableResult
-    func addTask(title: String, day: Date, now: Double = Date().timeIntervalSince1970) throws -> FocusTask {
+    func addTask(title: String, day: Date, goalID: String? = nil, now: Double = Date().timeIntervalSince1970) throws -> FocusTask {
         let name = try taskTitle(title)
         guard day.timeIntervalSince1970.isFinite else { throw FocusTaskError.missing }
         return try transaction { state in
             guard (state.tasks ?? []).count < 5000 else { throw FocusTaskError.limit }
+            try state.requireOpenGoal(goalID)
             let plannedDay = Calendar.current.startOfDay(for: day).timeIntervalSince1970
-            let task = FocusTask(title: name, plannedFor: plannedDay, createdAt: now, achievementPlannedFor: plannedDay)
+            let task = FocusTask(title: name, plannedFor: plannedDay, createdAt: now, achievementPlannedFor: plannedDay, goalID: goalID)
             state.tasks = (state.tasks ?? []) + [task]
             state.revision += 1
             return task
         }
     }
-    func editTask(id: String, title: String, day: Date) throws {
+    func editTask(id: String, title: String, day: Date, goal: TaskGoalAssignment = .unchanged) throws {
         let name = try taskTitle(title)
         guard day.timeIntervalSince1970.isFinite else { throw FocusTaskError.missing }
         try transaction { state in
             guard let index = state.tasks?.firstIndex(where: { $0.id == id }) else { throw FocusTaskError.missing }
+            if case let .set(goalID, includePrevious) = goal {
+                if state.tasks![index].goalID != goalID || includePrevious {
+                    guard state.session?.taskID != id else { throw FocusTaskError.active }
+                    try state.requireOpenGoal(goalID)
+                    state.tasks![index].goalID = goalID
+                    if let goalID, includePrevious {
+                        for recordIndex in state.records.indices where state.records[recordIndex].taskID == id && state.records[recordIndex].goalID == nil {
+                            state.records[recordIndex].goalID = goalID
+                        }
+                    }
+                }
+            }
             if state.tasks![index].achievementPlannedFor == nil {
                 state.tasks![index].achievementPlannedFor = state.tasks![index].plannedFor
             }
@@ -319,7 +379,9 @@ final class FocusStore {
             }
             guard !(state.tasks ?? []).contains(where: { $0.id == deleted.task.id }) else { return }
             guard (state.tasks ?? []).count < 5000 else { throw FocusTaskError.limit }
-            state.tasks = (state.tasks ?? []) + [deleted.task]
+            var restored = deleted.task
+            if let goalID = restored.goalID, !(state.goals ?? []).contains(where: { $0.id == goalID }) { restored.goalID = nil }
+            state.tasks = (state.tasks ?? []) + [restored]
             for index in state.records.indices where deleted.linkedRecordIDs.contains(state.records[index].id) && state.records[index].taskID == nil {
                 state.records[index].taskID = deleted.task.id
             }

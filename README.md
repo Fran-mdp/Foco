@@ -34,7 +34,7 @@ El complemento todavía no está en Chrome Web Store. Solo controla el perfil do
 
 ## Tu primer bloque
 
-En **Concentrarme → Editar bloqueos**, elegí sitios y aplicaciones. Guardá tu trabajo antes de empezar: las apps elegidas reciben una solicitud de cierre.
+En **Foco → Editar bloqueos**, elegí sitios y aplicaciones. Guardá tu trabajo antes de empezar: las apps elegidas reciben una solicitud de cierre.
 
 - **Flexible → Iniciar foco:** empieza al instante y podés terminar cuando quieras.
 - **Configurar duración:** elegí los minutos. **Firme** mantiene el compromiso hasta que termina el tiempo.
@@ -43,6 +43,23 @@ En **Concentrarme → Editar bloqueos**, elegí sitios y aplicaciones. Guardá t
 - **Mi progreso:** revisá día, semana, mes, año o fechas, y encontrá tus logros debajo del gráfico y las tareas.
 
 Foco ayuda a concentrarte; el modo firme se puede eludir desactivando el complemento o usando otro navegador. No es un control parental ni un bloqueo imposible de quitar.
+
+## Objetivos y resultados
+
+En **Objetivos → Nuevo**, creá algo que quieras conseguir, por ejemplo **Aprobar IPSC**, y fijá una meta opcional de horas. Podés escribir `1,5` para una hora y media.
+
+- En **Tareas**, asociá varias tareas al objetivo. Al elegir una tarea para foco, se selecciona su objetivo.
+- También podés elegir un objetivo en **Foco** y empezar un bloque sin tarea. Las pausas se excluyen en ambos casos.
+- En **Progreso → Objetivo**, filtrá el gráfico, las estadísticas y los bloques. Se muestra el acumulado histórico frente a la meta y también el tiempo de las fechas elegidas.
+- Al finalizar, elegí **Registrar resultado**: **Cumplido**, **Parcial** o **No cumplido**, con una nota opcional. Alcanzar las horas nunca elige el resultado automáticamente. Los objetivos cerrados quedan en **Con resultado** y ya no aceptan bloques nuevos; podés corregir su resultado.
+
+Los bloques conservan el objetivo con el que empezaron. Mover una tarea no reasigna sus horas pasadas. En **Editar tarea**, la opción **Incluir bloques anteriores sin objetivo** permite incorporar tiempo histórico explícitamente, sin mover bloques que ya pertenecen a otro objetivo.
+
+Podés borrar un objetivo desde su menú y deshacer durante 8 segundos. El borrado conserva sus tareas y todos los bloques como tiempo sin objetivo; al borrar solo una tarea, sus bloques siguen sumando al objetivo original. También podés asignar o corregir un bloque terminado desde el ícono de objetivo junto a su duración en **Progreso → Sesiones del período**, incluso si no tenía tarea o si el objetivo ya está cerrado. Eso no cambia sus minutos ni sus pausas. El tiempo anterior a esta versión queda sin objetivo hasta que lo asignes explícitamente.
+
+## Calidad y dificultad
+
+Al terminar un bloque, podés valorar tu concentración del 1 al 10 y elegir si el tema tuvo dificultad Baja, Media o Alta. Podés guardar los dos datos juntos, completar solo uno u omitir la pregunta. En **Progreso** aparece el promedio de las sesiones que valoraste según las fechas y el objetivo elegidos. En **Sesiones del período → …** podés agregar, editar o quitar cualquiera de los dos datos.
 
 ## Ayuda
 
@@ -54,7 +71,7 @@ Foco ayuda a concentrarte; el modo firme se puede eludir desactivando el complem
 
 ## Privacidad y desarrollo
 
-Sin servidor, anuncios, telemetría ni servicios de IA dentro de la app. Los datos se guardan localmente en `~/Library/Application Support/Foco/`. No se envían nombres de tareas ni porcentajes a Chrome. Los archivos locales no están cifrados por Foco.
+Sin servidor, anuncios, telemetría ni servicios de IA dentro de la app. Los datos se guardan localmente en `~/Library/Application Support/Foco/`. No se envían nombres de tareas, objetivos, resultados ni notas a Chrome. Los archivos locales no están cifrados por Foco.
 
 - [Guía completa](docs/GUIA.md): funciones, permisos, límites, copias y desinstalación.
 - [Seguridad](SECURITY.md) y [alcance de la revisión](SECURITY_REVIEW.md).

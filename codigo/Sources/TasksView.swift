@@ -1,14 +1,30 @@
 import SwiftUI
 
 enum FocoSection: String, CaseIterable, Identifiable {
-    case focus = "Concentrarme", tasks = "Mis tareas", progress = "Mi progreso"
+    case focus = "Concentrarme", tasks = "Mis tareas", goals = "Mis objetivos", progress = "Mi progreso"
     var id: Self { self }
+    var navigationTitle: String {
+        switch self { case .focus: return "Foco"; case .tasks: return "Tareas"; case .goals: return "Objetivos"; case .progress: return "Progreso" }
+    }
 }
 
 struct TaskSessionPicker: View {
     @EnvironmentObject var model: FocoModel
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
+            if let session = model.session {
+                Label(model.goalName(session.goalID), systemImage: "target")
+                    .font(.system(size: 12, weight: .medium)).foregroundStyle(Color.focoSecondary)
+            } else {
+                HStack {
+                    Text("Objetivo de este bloque").font(.system(size: 12, weight: .medium))
+                    Spacer()
+                    Button("Mis objetivos") { model.section = .goals }.buttonStyle(.plain).foregroundStyle(Color.foco)
+                        .font(.system(size: 12, weight: .medium))
+                }
+                GoalMenu(selection: Binding(get: { model.selectedGoalID }, set: { model.chooseGoalID($0) }))
+                    .labelsHidden()
+            }
             if let session = model.session {
                 Label(model.taskName(session.taskID), systemImage: session.taskID == nil ? "circle.dashed" : "checklist")
                     .font(.system(size: 13, weight: .medium)).fixedSize(horizontal: false, vertical: true)
@@ -36,6 +52,7 @@ struct TasksView: View {
     @ViewState private var editing: FocusTask?
     @ViewState private var recording: FocusTask?
     @ViewState private var showArchived = false
+    @ViewState private var newGoalID: String?
     var interval: DateInterval { Calendar.current.dateInterval(of: .day, for: day)! }
     var report: TaskMetrics { TaskMetrics(state: model.state, now: model.now, interval: interval) }
     var listed: [FocusTask] {
@@ -64,7 +81,11 @@ struct TasksView: View {
                     Button("Agregar", action: add).buttonStyle(FocoPrimaryStyle())
                         .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
+                GoalMenu(selection: $newGoalID)
             }.padding(18).panel()
+                .onChange(of: model.state.revision) { _, _ in
+                    if let newGoalID, !model.openGoals.contains(where: { $0.id == newGoalID }) { self.newGoalID = nil }
+                }
             HStack(spacing: 0) {
                 taskStat("Completadas", value: "\(report.completed)")
                 taskStat("Pendientes", value: "\(listed.filter { $0.completedAt == nil && $0.archivedAt == nil }.count)")
@@ -120,7 +141,7 @@ struct TasksView: View {
         }.frame(maxWidth: .infinity, alignment: .leading)
     }
     func add() {
-        if model.addTask(title: title, day: day) { title = ""; showArchived = false }
+        if model.addTask(title: title, day: day, goalID: newGoalID) { title = ""; showArchived = false }
     }
     func taskRow(_ task: FocusTask) -> some View {
         let active = model.session?.taskID == task.id
@@ -137,10 +158,11 @@ struct TasksView: View {
                     Text(task.title).font(.system(size: 14, weight: .medium)).fixedSize(horizontal: false, vertical: true)
                     Text(active ? "En foco ahora" : "\(durationLabel(model.taskSeconds(task.id))) de foco acumulado")
                         .font(.system(size: 12)).foregroundStyle(Color.focoSecondary)
+                    if let goalID = task.goalID { Label(model.goalName(goalID), systemImage: "target").font(.system(size: 12)).foregroundStyle(Color.focoSecondary) }
                 }
                 Spacer(minLength: 4)
                 Menu {
-                    Button("Editar nombre o fecha") { editing = task }
+                    Button("Editar tarea y objetivo") { editing = task }
                     Button(task.archivedAt == nil ? "Archivar" : "Restaurar") { model.archiveTask(task) }.disabled(active)
                     Divider()
                     Button("Borrar tarea", role: .destructive) { model.deleteTask(task) }.disabled(active)
@@ -165,6 +187,7 @@ struct TasksView: View {
         if task.archivedAt == nil {
             if task.completedAt == nil && model.session == nil {
                 Button("Elegir para foco") { model.chooseTask(task) }.buttonStyle(FocoPrimaryStyle())
+                    .disabled(!model.canFocusTask(task)).help(model.canFocusTask(task) ? "Elegir esta tarea" : "El objetivo está cerrado; reasigná la tarea para iniciar.")
             }
             Button("Registrar avance") { recording = task }.buttonStyle(FocoSecondaryStyle())
                 .disabled(Calendar.current.startOfDay(for: day) > Calendar.current.startOfDay(for: model.now))
@@ -179,10 +202,13 @@ struct TaskEditSheet: View {
     let task: FocusTask
     @ViewState private var title: String
     @ViewState private var day: Date
+    @ViewState private var goalID: String?
+    @ViewState private var includePrevious = false
     init(task: FocusTask) {
         self.task = task
         _title = ViewState(initialValue: task.title)
         _day = ViewState(initialValue: Date(timeIntervalSince1970: task.plannedFor))
+        _goalID = ViewState(initialValue: task.goalID)
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -190,10 +216,18 @@ struct TaskEditSheet: View {
             TextField("Nombre", text: $title).textFieldStyle(.roundedBorder)
             if title.count > 160 { Text("El nombre puede tener hasta 160 caracteres.").font(.system(size: 12)).foregroundStyle(.orange) }
             DatePicker("Día", selection: $day, displayedComponents: .date)
+            GoalMenu(selection: $goalID, currentGoalID: task.goalID)
+                .disabled(model.session?.taskID == task.id)
+            if goalID != nil && model.state.records.contains(where: { $0.taskID == task.id && $0.goalID == nil }) {
+                Toggle("Incluir bloques anteriores sin objetivo", isOn: $includePrevious).font(.system(size: 12))
+                    .disabled(model.session?.taskID == task.id)
+            }
+            Text("Los bloques nuevos usan el objetivo elegido. El tiempo ya asociado a otro objetivo no se mueve.")
+                .font(.system(size: 11)).foregroundStyle(Color.focoSecondary).fixedSize(horizontal: false, vertical: true)
             HStack {
                 Button("Cancelar") { dismiss() }.buttonStyle(.plain)
                 Spacer()
-                Button("Guardar") { if model.editTask(task, title: title, day: day) { dismiss() } }
+                Button("Guardar") { if model.editTask(task, title: title, day: day, goalID: goalID, includePrevious: includePrevious) { dismiss() } }
                     .buttonStyle(FocoPrimaryStyle())
                     .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || title.count > 160)
             }
@@ -204,11 +238,16 @@ struct TaskEditSheet: View {
 struct TaskProgressPanel: View {
     @EnvironmentObject var model: FocoModel
     let interval: DateInterval
+    var goalID: String? = nil
     @ViewState private var visible = 10
-    var report: TaskMetrics { TaskMetrics(state: model.state, now: model.now, interval: interval) }
+    var report: TaskMetrics { TaskMetrics(state: model.state.filtered(forGoal: goalID), now: model.now, interval: interval) }
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Tareas y avance").font(.system(size: 18, weight: .medium, design: .rounded))
+            if goalID != nil {
+                Text("Incluye tareas con bloques en este objetivo. El porcentaje refleja el avance de la tarea.")
+                    .font(.system(size: 12)).foregroundStyle(Color.focoSecondary)
+            }
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 18) { summary }
                 VStack(alignment: .leading, spacing: 8) { summary }

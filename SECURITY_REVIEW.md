@@ -68,3 +68,7 @@ Cambio 0.5.2: borrado de tareas bajo la transacción local existente. Conserva l
 ## Revisión 0.6.0 — logros
 
 Cambios limitados a ocho archivos de cálculo, persistencia, vista, pruebas y compilación. Informe del implementador contrastado con Git; diff sin errores de formato. No hay nuevos permisos de Chrome, dependencias ni conexiones de red de la app. Metadatos de logros locales y sin títulos para tareas borradas, con límite de 5000 y fallo antes de borrar al agotarlo. Tipos opcionales para conservar compatibilidad. Pruebas de privacidad del host nativo, bloqueo, pausas y tareas existentes pasaron junto a los 19 escenarios nuevos. No equivale a una garantía de ausencia de vulnerabilidades.
+
+## 0.7.0 — objetivos
+
+No se agregan permisos, servicios de red ni dependencias. Los campos nuevos son opcionales para conservar la lectura de datos previos. Las asociaciones por bloque son estables: editar una tarea no mueve su historial; la importación de tiempo sin objetivo es explícita y transaccional. Cerrar o borrar un objetivo con un bloque activo se rechaza. El host nativo elimina taskID y goalID antes de responder a Chrome; no envía nombres, notas ni resultados. Las pruebas usan almacenes temporales. El resultado es autodeclarado y no se deduce del tiempo.

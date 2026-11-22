@@ -1,5 +1,26 @@
 # Cambios
 
+## 0.7.3
+
+- El selector de tareas del próximo bloque muestra solo las tareas del objetivo elegido. Sin objetivo, muestra todas las tareas disponibles.
+
+## 0.7.2
+
+- Dificultad del tema (Baja, Media o Alta) junto a la calidad en la valoración de cada sesión.
+
+## 0.7.1
+
+- Valoración opcional del 1 al 10 al terminar una sesión.
+- Calidad por bloque y promedio de sesiones valoradas según fecha y objetivo.
+
+## 0.7.0
+
+- Objetivos con meta opcional de horas y varias tareas asociadas.
+- Bloques directos por objetivo, tiempo histórico sin pausas y filtro del dashboard.
+- Resultado manual Cumplido, Parcial o No cumplido, con nota opcional y comparación con la dedicación planificada.
+- Asociación histórica de cada bloque, importación explícita de bloques sin objetivo y borrado con deshacer sin perder tiempo.
+- Compatibilidad con datos anteriores y exclusión de objetivos y resultados de los mensajes a Chrome.
+
 ## 0.6.1
 
 - Tiempo por día antes de tareas y logros; logros debajo de la actividad.
