@@ -1,36 +1,26 @@
 # Foco
 
-Un espacio para estudiar sin distracciones: bloqueá sitios en Chrome y apps de tu Mac, organizá tareas y mirá tu tiempo de foco y tus logros. Tus datos quedan en tu computadora; no necesitás crear una cuenta.
+Foco es una app para Mac que te ayuda a estudiar o trabajar con menos distracciones. Elegís qué sitios de Chrome y qué apps querés bloquear durante un bloque de concentración. Después podés ver cuánto tiempo le dedicaste a cada tarea u objetivo y registrar cómo te fue. Tus datos quedan en la Mac y no necesitás crear una cuenta.
 
-**Compatible con Mac con chip Apple Silicon (M1 o posterior) y macOS 26 o posterior.** Por ahora no funciona en Mac Intel, Windows ni iPhone. Necesitás Google Chrome para bloquear sitios.
+[**Descargar Foco para Mac (ZIP)**](https://github.com/Fran-mdp/Foco/archive/refs/heads/main.zip)
+
+Necesitás **una Mac con chip M1 o posterior, macOS 26 o posterior y Google Chrome**. El ZIP contiene el proyecto y un instalador que compila la app en tu Mac.
 
 ## Instalación rápida
 
-La instalación actual compila Foco en tu propia Mac. No necesitás pagar una cuenta de desarrollador ni saber programar. La primera vez macOS puede pedirte instalar las herramientas gratuitas de Apple; la compilación puede tardar unos minutos.
+1. **Descargá y descomprimí el ZIP.** Dentro de la carpeta `Foco-main` vas a encontrar `Instalar.command`.
+2. **Ejecutá el instalador.** Abrí Terminal con **⌘ + Espacio** y buscá «Terminal». Escribí `bash` seguido de un espacio, arrastrá el archivo `Instalar.command` a esa ventana y presioná **Enter**. Si te faltan las herramientas de Apple, ejecutá `xcode-select --install`, esperá a que termine y repetí este paso.
+3. **Abrí Foco.** En Finder, presioná **⌘⇧G**, pegá `~/Applications` y presioná **Enter**. Abrí **Foco** en esa carpeta.
 
-### 1. Descargá el proyecto
+El instalador puede tardar unos minutos. Deja Foco en la carpeta Aplicaciones de tu usuario y usa una firma local.
 
-[Descargá el proyecto en ZIP](https://github.com/Fran-mdp/Foco/archive/refs/heads/main.zip) y descomprimí el archivo. También podés usar **Code → Download ZIP** en GitHub. Abrí la carpeta que contiene este README y `Instalar.command`.
+## Conectá Chrome una sola vez
 
-### 2. Instalá Foco
+1. En Foco, tocá **Conectar Chrome → Preparar conexión local → Copiar ruta**.
+2. En tu perfil de Chrome, escribí `chrome://extensions` en la barra de direcciones. Activá **Modo de desarrollador** y hacé clic en **Cargar descomprimida** (también puede aparecer como **Cargar extensión sin empaquetar**). Presioná **⌘⇧G**, pegá la ruta que copiaste y elegí la carpeta.
+3. Abrí **Foco** desde el menú de extensiones de Chrome y autorizá los sitios que querés bloquear. Volvé a la app y comprobá que diga **Chrome conectado**.
 
-Abrí **Terminal** desde Spotlight (⌘ + espacio). Escribí `cd ` —con un espacio al final—, arrastrá la carpeta del proyecto a Terminal y presioná Enter. Después pegá:
-
-```sh
-bash Instalar.command
-```
-
-El instalador verifica la compatibilidad, compila la app y la guarda en **tu carpeta personal → Aplicaciones → Foco**. No pide contraseña de administrador, no borra tu historial y no descarga paquetes de terceros. Si faltan las herramientas de Apple, te muestra qué comando ejecutar y luego podés repetir la instalación.
-
-Podés revisar primero el archivo `Instalar.command`. No uses comandos de terceros que te pidan desactivar las protecciones de macOS. Esta versión tiene firma local; no tiene firma Developer ID ni notarización de Apple.
-
-### 3. Conectá Chrome una sola vez
-
-1. Abrí **Foco** desde tu carpeta personal → Aplicaciones. Tocá **Conectar Chrome → Preparar conexión local → Copiar ruta**.
-2. En el perfil de Chrome que usás, abrí `chrome://extensions`. Activá **Modo de desarrollador** y elegí **Cargar descomprimida / Cargar extensión sin empaquetar**. En el selector, presioná **⌘⇧G**, pegá la ruta y confirmá la carpeta.
-3. Abrí el complemento **Foco** en Chrome y autorizá los sitios elegidos. Volvé a la app: debe decir **Chrome conectado**.
-
-El complemento todavía no está en Chrome Web Store. Solo controla el perfil donde lo cargás; no otros navegadores ni perfiles. Los permisos de sitios se conceden por dominio.
+El complemento se carga localmente y los permisos se conceden por dominio en ese perfil de Chrome.
 
 ## Tu primer bloque
 
@@ -65,7 +55,7 @@ Al terminar un bloque, podés valorar tu concentración del 1 al 10 y elegir si 
 
 - **Faltan herramientas de Apple:** ejecutá `xcode-select --install`, terminá la instalación y repetí el paso 2. Si el instalador detecta un SDK viejo, actualizá las herramientas de Apple antes de continuar.
 - **Chrome no conecta:** verificá que Foco esté abierta, que hayas preparado la conexión desde esa copia y que el complemento esté cargado en el perfil correcto.
-- **Quiero actualizar:** salí de Foco y cerrá cualquier bloque en curso antes de repetir el instalador. Después abrí la copia actualizada y volvé a preparar la conexión. No se reemplaza la carpeta de tus datos.
+- **Quiero actualizar:** terminá el bloque en curso y salí de Foco antes de repetir el instalador. Después abrí la copia actualizada y volvé a preparar la conexión. No se reemplaza la carpeta de tus datos.
 - **Ya tengo Foco en Aplicaciones del sistema:** elegí una sola copia para usar; el instalador nuevo utiliza la carpeta Aplicaciones de tu usuario. Prepará la conexión desde esa copia para evitar confusiones.
 - **Quiero desinstalar:** quitá el complemento de Chrome, salí de Foco y mové la app a la Papelera. La [guía completa](docs/GUIA.md#desinstalar) explica cómo quitar también los datos locales si lo deseás.
 
